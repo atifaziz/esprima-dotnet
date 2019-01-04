@@ -11,7 +11,7 @@ namespace Esprima.Utils
     /// Universal Binary JSON (http://ubjson.org/) format.
     /// </summary>
 
-    public sealed class UbjsonWriter : JsonWriter
+    public sealed partial class UbjsonWriter : JsonWriter
     {
         private static readonly UTF8Encoding Utf8BomlessEncoding =
             new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
@@ -221,6 +221,109 @@ namespace Esprima.Utils
 
             public static implicit operator double(DoubleBuffer buffer) => buffer.Value;
             public static implicit operator DoubleBuffer(double value) => new DoubleBuffer(value);
+        }
+    }
+
+    partial class UbjsonWriter
+    {
+        public static Reader CreateReader(Stream stream) =>
+            new Reader(stream);
+
+        public sealed class Reader
+        {
+            private readonly Stream _stream;
+            private byte[] _buffer;
+
+            public Reader(Stream stream) =>
+                _stream = stream ?? throw new ArgumentNullException(nameof(stream));
+
+            private byte[] GetBuffer(int desiredCapacity)
+            {
+                if (desiredCapacity <= 0)
+                {
+                    throw new ArgumentOutOfRangeException(nameof(desiredCapacity));
+                }
+
+                if (desiredCapacity > (_buffer?.Length ?? 0))
+                {
+                    Array.Resize(ref _buffer, Math.Max(desiredCapacity, 256));
+                }
+
+                Debug.Assert(_buffer != null);
+                return _buffer;
+            }
+
+            public char ReadType()
+            {
+                return (char) _stream.ReadByte();
+            }
+
+            public int ReadInt32()
+            {
+                var buffer = GetBuffer(4);
+                var readLength = _stream.Read(buffer, 0, buffer.Length);
+
+                if (readLength < 4)
+                {
+                    throw new FormatException("Invalid UBJSON encoded int32.");
+                }
+
+                return new Int32Buffer
+                {
+                    Byte0 = buffer[0],
+                    Byte1 = buffer[1],
+                    Byte2 = buffer[2],
+                    Byte3 = buffer[3],
+                };
+            }
+
+            public long ReadInt64()
+            {
+                var buffer = GetBuffer(8);
+                var readLength = _stream.Read(buffer, 0, buffer.Length);
+
+                if (readLength < 8)
+                {
+                    throw new FormatException("Invalid UBJSON encoded int64.");
+                }
+
+                return new Int64Buffer
+                {
+                    Byte0 = buffer[0],
+                    Byte1 = buffer[1],
+                    Byte2 = buffer[2],
+                    Byte3 = buffer[3],
+                    Byte4 = buffer[4],
+                    Byte5 = buffer[5],
+                    Byte6 = buffer[6],
+                    Byte7 = buffer[7],
+                };
+            }
+
+            public string ReadString()
+            {
+                var lengthType = ReadType();
+
+                if (lengthType == 'L')
+                {
+                    throw new Exception("UBJSON string is too long.");
+                }
+
+                if (lengthType != 'l')
+                {
+                    throw new NotSupportedException("Unsupported UBJSON string length type.");
+                }
+
+                var byteLength = ReadInt32();
+                var buffer = GetBuffer(byteLength);
+                var readLength = _stream.Read(buffer, 0, byteLength);
+                if (readLength < byteLength)
+                {
+                    throw new FormatException("Invalid UBJSON string.");
+                }
+
+                return Utf8BomlessEncoding.GetString(buffer, 0, byteLength);
+            }
         }
     }
 }
