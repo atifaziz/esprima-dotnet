@@ -30,8 +30,22 @@ namespace Esprima
             public Stack<int> MarkerStack;
         }
 
-        private readonly Stack<HoistingScope> _hoistingScopes = new Stack<HoistingScope>();
-
+        private struct HoistingScopeLists
+        {
+            public HoistingScopeLists(
+                Ast.List<FunctionDeclaration> functionDeclarations,
+                Ast.List<VariableDeclaration> variableDeclarations)
+            {
+                FunctionDeclarations = functionDeclarations;
+                VariableDeclarations = variableDeclarations;
+            }
+            
+            public readonly Ast.List<FunctionDeclaration> FunctionDeclarations;
+            public readonly Ast.List<VariableDeclaration> VariableDeclarations;
+        }
+        
+        private readonly Stack<HoistingScopeLists> _hoistingScopes = new Stack<HoistingScopeLists>();
+        
         private Token _lookahead;
         private readonly Context _context;
         private readonly Marker _startMarker;
@@ -4243,12 +4257,17 @@ namespace Esprima
 
         private void EnterHoistingScope()
         {
-            _hoistingScopes.Push(new HoistingScope());
+            _hoistingScopes.Push(
+                new HoistingScopeLists(
+                    new Ast.List<FunctionDeclaration>(),
+                    new Ast.List<VariableDeclaration>()));
         }
 
         private HoistingScope LeaveHoistingScope()
         {
-            return _hoistingScopes.Pop();
+            var scope = _hoistingScopes.Pop();
+            return new HoistingScope(scope.FunctionDeclarations,
+                                     scope.VariableDeclarations);
         }
 
         private VariableDeclaration Hoist(VariableDeclaration variableDeclaration)

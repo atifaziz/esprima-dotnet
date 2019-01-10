@@ -532,7 +532,7 @@ namespace Esprima.Utils
                 arrowFunctionExpression.Params,
                 statement,
                 false,
-                new HoistingScope(),
+                new HoistingScope(new Ast.List<FunctionDeclaration>(), new Ast.List<VariableDeclaration>()),
                 IsStrictMode);
             VisitFunctionExpression(func);
         }

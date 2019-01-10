@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using Esprima.Ast;
 
 namespace Esprima
@@ -8,7 +7,14 @@ namespace Esprima
     /// </summary>
     public class HoistingScope
     {
-        public Ast.List<FunctionDeclaration> FunctionDeclarations = new Ast.List<FunctionDeclaration>();
-        public Ast.List<VariableDeclaration> VariableDeclarations = new Ast.List<VariableDeclaration>();
+        public List<FunctionDeclaration> FunctionDeclarations;
+        public List<VariableDeclaration> VariableDeclarations;
+
+        public HoistingScope(List<FunctionDeclaration> functionDeclarations,
+                             List<VariableDeclaration> variableDeclarations)
+        {
+            FunctionDeclarations = functionDeclarations;
+            VariableDeclarations = variableDeclarations;
+        }
     }
 }
