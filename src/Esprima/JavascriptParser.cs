@@ -1038,10 +1038,11 @@ namespace Esprima
 
                     break;
                 case Nodes.ArrayExpression:
-                    var elements = new Ast.List<ArrayPatternElement>();
-
-                    foreach (var element in expr.As<ArrayExpression>().Elements)
+                    var list = expr.As<ArrayExpression>().Elements;
+                    var elements = new Ast.List<ArrayPatternElement>(list.Count);
+                    for (var i = 0; i < list.Count; i++)
                     {
+                        var element = list[i];
                         if (element != null)
                         {
                             elements.Add(ReinterpretExpressionAsPattern(element).As<ArrayPatternElement>());
@@ -1059,13 +1060,15 @@ namespace Esprima
 
                     break;
                 case Nodes.ObjectExpression:
-                    var properties = new Ast.List<Property>();
-
-                    foreach (var property in (expr.As<ObjectExpression>()).Properties)
+                    var props = expr.As<ObjectExpression>().Properties;
+                    var properties = new Ast.List<Property>(props.Count);
+                    for (var i = 0; i < props.Count; i++)
                     {
+                        var property = props[i];
                         property.Value = ReinterpretExpressionAsPattern(property.Value).As<PropertyValue>();
                         properties.Add(property);
                     }
+
                     node = new ObjectPattern(properties);
                     node.Range = expr.Range;
                     node.Location = _config.Loc ? expr.Location : default;
@@ -1147,11 +1150,13 @@ namespace Esprima
                                     Expect("=>");
                                 }
                                 _context.IsBindingElement = false;
-                                var reinterpretedExpressions = new Ast.List<Expression>();
-                                foreach (var expression in expressions)
+                                var reinterpretedExpressions = new Ast.List<Expression>(expressions.Count);
+                                for (var index = 0; index < expressions.Count; index++)
                                 {
+                                    var expression = expressions[index];
                                     reinterpretedExpressions.Add(ReinterpretExpressionAsPattern(expression).As<Expression>());
                                 }
+
                                 expressions = reinterpretedExpressions;
                                 arrow = true;
                                 expr = new ArrowParameterPlaceHolder(expressions.Select(e => (INode) e));
@@ -1191,11 +1196,13 @@ namespace Esprima
                                 if (expr.Type == Nodes.SequenceExpression)
                                 {
                                     var sequenceExpression = expr.As<SequenceExpression>();
-                                    var reinterpretedExpressions = new Ast.List<Expression>();
-                                    foreach (var expression in sequenceExpression.Expressions)
+                                    var reinterpretedExpressions = new Ast.List<Expression>(sequenceExpression.Expressions.Count);
+                                    for (var i = 0; i < sequenceExpression.Expressions.Count; i++)
                                     {
+                                        var expression = sequenceExpression.Expressions[i];
                                         reinterpretedExpressions.Add(ReinterpretExpressionAsPattern(expression).As<Expression>());
                                     }
+
                                     sequenceExpression.Expressions = reinterpretedExpressions;
                                 }
                                 else
@@ -1736,22 +1743,28 @@ namespace Esprima
                     CheckPatternParam(options, param.As<AssignmentPattern>().Left);
                     break;
                 case Nodes.ArrayPattern:
-                    foreach (var element in param.As<ArrayPattern>().Elements)
+                    var list = param.As<ArrayPattern>().Elements;
+                    for (var i = 0; i < list.Count; i++)
                     {
+                        var element = list[i];
                         if (element != null)
                         {
                             CheckPatternParam(options, element);
                         }
                     }
+
                     break;
                 case Nodes.YieldExpression:
                     break;
                 default:
                     //assert(param.type == Nodes.ObjectPattern, 'Invalid type');
-                    foreach (var property in param.As<ObjectPattern>().Properties)
+                    var properties = param.As<ObjectPattern>().Properties;
+                    for (var i = 0; i < properties.Count; i++)
                     {
+                        var property = properties[i];
                         CheckPatternParam(options, property.Value);
                     }
+
                     break;
             }
         }
@@ -2972,15 +2985,16 @@ namespace Esprima
 
                 case TokenType.Punctuator:
                     var value = _lookahead.Value;
-                    if ((string)value == "{")
+                    var s = (string) value;
+                    if (s == "{")
                     {
                         statement = ParseBlock();
                     }
-                    else if ((string)value == "(")
+                    else if (s == "(")
                     {
                         statement = ParseExpressionStatement();
                     }
-                    else if ((string)value == ";")
+                    else if (s == ";")
                     {
                         statement = ParseEmptyStatement();
                     }

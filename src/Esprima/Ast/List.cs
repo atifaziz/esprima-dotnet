@@ -16,28 +16,54 @@ namespace Esprima.Ast
 
     public struct List<T> : IReadOnlyList<T>
     {
+        private static readonly T[] _emptyArray = new T[0];
+
         private T[] _items;
         private int _count;
 
         internal List(int capacity)
         {
-            _items = capacity == 0 ? null : new T[capacity];
+            _items = capacity == 0 ? _emptyArray : new T[capacity];
             _count = 0;
         }
 
         public List(List<T> list) : this()
         {
-            if (list.Count <= 0)
+            if (list._count <= 0)
             {
                 return;
             }
 
-            _items = new T[list.Count];
+            _items = new T[list._count];
             list._items.CopyTo(_items, 0);
-            _count = list.Count;
+            _count = list._count;
         }
 
-        private int Capacity => _items?.Length ?? 0;
+        private int Capacity
+        {
+            set
+            {
+                Debug.Assert(value >= _count);
+                _items = _items ?? (_items = _emptyArray);
+                if (value == _items.Length)
+                {
+                    return;
+                }
+                if (value > 0)
+                {
+                    T[] newArray = new T[value];
+                    if (_count > 0)
+                    {
+                        Array.Copy(_items, 0, newArray, 0, _count);
+                    }
+                    _items = newArray;
+                }
+                else
+                {
+                    _items = _emptyArray;
+                }
+            }
+        }
 
         public int Count
         {
@@ -45,8 +71,10 @@ namespace Esprima.Ast
             get => _count;
         }
 
-        internal List<TResult> Select<TResult>(Func<T, TResult> selector)
+        internal List<TResult> Select<TResult>(Func<T, TResult> selector) where TResult : class
         {
+            _items = _items ?? (_items = _emptyArray);
+
             if (selector == null)
             {
                 throw new ArgumentNullException(nameof(selector));
@@ -54,11 +82,11 @@ namespace Esprima.Ast
 
             var list = new List<TResult>
             {
-                _count = Count,
-                _items = new TResult[Count]
+                _count = _count,
+                _items = new TResult[_count]
             };
 
-            for (var i = 0; i < Count; i++)
+            for (var i = 0; i < _count; i++)
             {
                 list._items[i] = selector(_items[i]);
             }
@@ -66,74 +94,88 @@ namespace Esprima.Ast
             return list;
         }
 
-        internal void AddRange<TSource>(List<TSource> list) where TSource : T
+        internal void AddRange<TSource>(List<TSource> list)
         {
-            if (list.Count == 0)
+            var count = list._count;
+            if (count == 0)
             {
                 return;
             }
 
-            var oldCount = Count;
-            var newCount = oldCount + list.Count;
-
-            if (Capacity < newCount)
-            {
-                Array.Resize(ref _items, newCount);
-            }
-
-            Debug.Assert(_items != null);
-            Array.Copy(list._items, 0, _items, oldCount, list.Count);
-            _count = newCount;
+            EnsureCapacity(_count + count);
+            Array.Copy(list._items, 0, _items, _count, count);
+            _count += count;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void Add(T item)
         {
-            var capacity = Capacity;
-
-            if (Count == capacity)
+            var items = _items ?? (_items = _emptyArray);
+            var count = _count;
+            if ((uint) count < (uint) items.Length)
             {
-                Array.Resize(ref _items, Math.Max(capacity * 2, 4));
+                _count = count + 1;
+                items[count] = item;
             }
+            else
+            {
+                AddWithResize(item);
+            }
+        }
 
-            Debug.Assert(_items != null);
-            _items[Count] = item;
-            _count++;
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private void AddWithResize(T item)
+        {
+            int count = _count;
+            EnsureCapacity(count + 1);
+            _items[_count++] = item;
+        }
+
+        private void EnsureCapacity(int min)
+        {
+            _items = _items ?? (_items = _emptyArray);
+
+            if (_items.Length >= min)
+            {
+                return;
+            }
+            int num = _items.Length == 0 ? 4 : _items.Length * 2;
+            if (num < min)
+            {
+                num = min;
+            }
+            Capacity = num;
         }
 
         internal void RemoveAt(int index)
         {
-            if (index < 0 || index >= Count)
-            {
-                throw new ArgumentOutOfRangeException(nameof(index), index, null);
-            }
+            Debug.Assert(index >= 0 && index < _count);
 
             _items[index] = default;
             _count--;
 
-            if (index == Count)
+            if (index == _count)
             {
                 return;
             }
 
-            Array.Copy(_items, index + 1, _items, index, Count - index);
+            Array.Copy(_items, index + 1, _items, index, _count - index);
         }
 
         public T this[int index]
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get => index >= 0 && index < Count
-                 ? _items[index]
-                 : Throw<T>(new IndexOutOfRangeException());
-
-            internal set
+            get
             {
-                if (index < 0 || index >= Count)
+                if ((uint) index >= (uint) _count)
                 {
-                    throw new IndexOutOfRangeException();
+                    Throw<ArgumentOutOfRangeException>();
                 }
-
-                _items[index] = value;
+                return _items[index];
             }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            internal set => _items[index] = value;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -142,13 +184,13 @@ namespace Esprima.Ast
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal T Pop()
         {
-            var lastIndex = Count - 1;
+            var lastIndex = _count - 1;
             var last = this[lastIndex];
             RemoveAt(lastIndex);
             return last;
         }
 
-        public Enumerator GetEnumerator() => new Enumerator(_items, Count);
+        public Enumerator GetEnumerator() => new Enumerator(_items ?? _emptyArray, _count);
 
         IEnumerator<T> IEnumerable<T>.GetEnumerator() => GetEnumerator();
 
@@ -163,64 +205,57 @@ namespace Esprima.Ast
         public struct Enumerator : IEnumerator<T>
         {
             private int _index;
-            private T[] _items; // Usually null when count is zero
-            private int _count;
+            private readonly T[] _items;
+            private readonly int _count;
+            private T _current;
 
             internal Enumerator(T[] items, int count) : this()
             {
-                _index = -1;
+                _index = 0;
                 _items = items;
                 _count = count;
             }
 
-            // Since the items can be null when count is zero, a negative
-            // count is used to designate the disposed state.
-
-            private bool IsDisposed => _count < 0;
-
             public void Dispose()
             {
-                _items = null;
-                _count = -1;
             }
 
             public bool MoveNext()
             {
-                ThrowIfDisposed();
-
-                if (_index + 1 == _count)
+                T[] items = _items;
+                if ((uint) _index >= (uint) _count)
                 {
-                    return false;
+                    return MoveNextRare();
                 }
-
-                _index++;
+                _current = items[_index];
+                ++_index;
                 return true;
+            }
+
+            private bool MoveNextRare()
+            {
+                _index = _count + 1;
+                _current = default (T);
+                return false;
             }
 
             public void Reset()
             {
-                ThrowIfDisposed();
-                _index = -1;
+                _index = 0;
+                _current = default;
             }
 
-            public T Current
+            public T Current => _current;
+
+            object IEnumerator.Current
             {
                 get
                 {
-                    ThrowIfDisposed();
-                    return _index >= 0
-                         ? _items[_index]
-                         : Throw<T>(new InvalidOperationException());
-                }
-            }
-
-            object IEnumerator.Current => Current;
-
-            private void ThrowIfDisposed()
-            {
-                if (IsDisposed)
-                {
-                    Throw<T>(new ObjectDisposedException(GetType().Name));
+                    if (_index == 0 || _index == _count + 1)
+                    {
+                        Throw<InvalidOperationException>();
+                    }
+                    return Current;
                 }
             }
         }

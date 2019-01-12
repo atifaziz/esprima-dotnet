@@ -556,13 +556,13 @@ namespace Esprima
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static char CharCodeAt(this string source, int index)
         {
-            if (index < 0 || index > source.Length - 1)
+            if ((uint) index < (uint) source.Length)
             {
-                // char.MinValue is used as the null value
-                return char.MinValue;
+                return source[index];
             }
 
-            return source[index];
+            // char.MinValue is used as the null value
+            return char.MinValue;
         }
     }
 }
