@@ -6,7 +6,7 @@
             this(new ErrorHandler()) {}
 
         public ParserOptions(string source) :
-            this(new ErrorHandler { Source = source }) {}
+            this(new ErrorHandler(source)) {}
 
         public ParserOptions(IErrorHandler errorHandler)
         {

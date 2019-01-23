@@ -319,7 +319,7 @@ namespace Esprima
                 var end   = new Position(_lastMarker.LineNumber,
                                          _lastMarker.Index - _lastMarker.LineStart);
 
-                node.Location = new Location(start, end, _errorHandler.Source);
+                node.Location = new Location(start, end, _scanner.Source);
             }
 
             _action?.Invoke(node);

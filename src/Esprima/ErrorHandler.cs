@@ -1,30 +1,38 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace Esprima
 {
     public class ErrorHandler : IErrorHandler
     {
-        public IList<ParserException> Errors { get; }
+        private ICollection<ParserException> _errors;
+
+        public ICollection<ParserException> Errors =>
+            _errors ?? (_errors = new List<ParserException>());
+
         public bool Tolerant { get; set; }
 
-        public string Source { get; set; }
+        public string Source { get; }
 
-        public ErrorHandler()
-        {
-            Errors = new List<ParserException>();
-            Tolerant = false;
-        }
+        public ErrorHandler() {}
 
-        public void RecordError(ParserException error)
+        public ErrorHandler(ICollection<ParserException> errors) =>
+            _errors = errors ?? throw new ArgumentNullException(nameof(errors));
+
+        public ErrorHandler(string source) =>
+            Source = source;
+
+        public ErrorHandler(ICollection<ParserException> errors, string source)
         {
-            Errors.Add(error);
+            _errors = errors ?? throw new ArgumentNullException(nameof(errors));
+            Source = source;
         }
 
         public void Tolerate(ParserException error)
         {
             if (Tolerant)
             {
-                RecordError(error);
+                Errors.Add(error);
             }
             else
             {
@@ -51,7 +59,7 @@ namespace Esprima
             var error = this.CreateError(index, line, col, description);
             if (Tolerant)
             {
-                this.RecordError(error);
+                this.Errors.Add(error);
             }
             else
             {
