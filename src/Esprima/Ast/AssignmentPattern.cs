@@ -10,7 +10,7 @@ namespace Esprima.Ast
         PropertyValue
     {
         public INode Left  { get; }
-        public INode Right { get; }
+        public INode Right { get; internal set; }
 
         public AssignmentPattern(INode left, INode right) :
             base(Nodes.AssignmentPattern)
