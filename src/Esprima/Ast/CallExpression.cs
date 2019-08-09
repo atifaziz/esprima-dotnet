@@ -7,7 +7,10 @@ namespace Esprima.Ast
     {
         private readonly NodeList<ArgumentListElement> _arguments;
 
-        public readonly Expression Callee;
+        public Expression Callee { get; }
+        
+        // TODO review following fields
+
         public bool Cached;
         public bool CanBeCached = true;
         public object CachedArguments;
