@@ -37,22 +37,22 @@ namespace Esprima.Ast
     public class AssignmentExpression : Node,
         Expression
     {
-        public readonly AssignmentOperator Operator;
+        public AssignmentOperator Operator { get; }
 
         // Can be something else than Expression (ObjectPattern, ArrayPattern) in case of destructuring assignment
-        public readonly INode Left;
-        public readonly Expression Right;
+        public INode Left { get; }
+        public Expression Right { get; }
 
         public AssignmentExpression(string op, INode left, Expression right) :
             base(Nodes.AssignmentExpression)
         {
-            Operator = AssignmentExpression.ParseAssignmentOperator(op);
+            Operator = ParseAssignmentOperator(op);
             Left = left;
             Right = right;
         }
 
 
-        public static AssignmentOperator ParseAssignmentOperator(string op)
+        private static AssignmentOperator ParseAssignmentOperator(string op)
         {
             switch (op)
             {

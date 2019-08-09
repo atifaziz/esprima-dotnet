@@ -9,8 +9,8 @@ namespace Esprima.Ast
         IFunctionParameter,
         PropertyValue
     {
-        public readonly INode Left;
-        public INode Right;
+        public INode Left  { get; }
+        public INode Right { get; }
 
         public AssignmentPattern(INode left, INode right) :
             base(Nodes.AssignmentPattern)
