@@ -4,8 +4,8 @@ namespace Esprima.Ast
 {
     public class CatchClause : Statement
     {
-        public readonly IArrayPatternElement Param; // BindingIdentifier | BindingPattern;
-        public readonly BlockStatement Body;
+        public IArrayPatternElement Param { get; } // BindingIdentifier | BindingPattern;
+        public  BlockStatement Body { get; }
 
         public CatchClause(IArrayPatternElement param, BlockStatement body) :
             base(Nodes.CatchClause)
